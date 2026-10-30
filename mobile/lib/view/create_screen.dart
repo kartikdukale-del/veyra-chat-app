@@ -2,8 +2,10 @@ import 'package:app/const/custom_color.dart';
 import 'package:app/const/custom_fontweight.dart';
 import 'package:app/const/custom_input.dart';
 import 'package:app/const/custom_string.dart';
+import 'package:app/repo/auth_repo.dart';
 import 'package:app/utiles/routing_bottomNavigation.dart';
 import 'package:app/view/login_screen.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 class CreateScreen extends StatefulWidget {
@@ -14,11 +16,49 @@ class CreateScreen extends StatefulWidget {
 
 class _CreateScreenState extends State<CreateScreen> {
   final _formKey = GlobalKey<FormState>();
-
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final AuthRepo authRepo = AuthRepo();
+  bool isLoading = false;
+  
+  Future<void> signup() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      final response = await authRepo.signup(
+        fullName: nameController.text.trim(),
+        email: emailController.text.trim(),
+        password: passwordController.text,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Account created successfully")));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (contex) => LoginScreen()),
+      );
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final message = e.response?.data['detail'] ?? "Signup failed";
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message.toString())));
+    } finally {
+      if(mounted) {
+        setState(() {
+          isLoading =false;
+        });
+      }
+    }
+  }
   @override
+
   void dispose() {
     nameController.dispose();
     emailController.dispose();
@@ -71,7 +111,7 @@ class _CreateScreenState extends State<CreateScreen> {
                     SizedBox(height: 8),
                     CustomInput(
                       controller: nameController,
-                      
+
                       prefixicon: Icons.account_circle_outlined,
                       obscureText: false,
                       hintText: "Your name",
@@ -93,7 +133,7 @@ class _CreateScreenState extends State<CreateScreen> {
                     SizedBox(height: 8),
                     CustomInput(
                       controller: emailController,
-                  
+
                       prefixicon: Icons.mail_outline_rounded,
                       obscureText: false,
                       validator: (value) {
@@ -117,7 +157,7 @@ class _CreateScreenState extends State<CreateScreen> {
                     SizedBox(height: 8),
                     CustomInput(
                       controller: passwordController,
-                      
+
                       hintText: "Create a password",
                       prefixicon: Icons.lock_outline_rounded,
                       obscureText: true,
@@ -138,16 +178,7 @@ class _CreateScreenState extends State<CreateScreen> {
                     ),
                     SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => RoutingBottomnavigation(),
-                            ),
-                          );
-                        }
-                      },
+                      onPressed: isLoading ? null: signup,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColor.blue,
                         minimumSize: Size(double.infinity, 55),
@@ -155,7 +186,10 @@ class _CreateScreenState extends State<CreateScreen> {
                           borderRadius: BorderRadiusGeometry.circular(12),
                         ),
                       ),
-                      child: Text(
+                      child: isLoading?CircularProgressIndicator(
+                        color: AppColor.white
+                      )
+                      :Text(
                         AppString.create,
                         style: TextStyle(
                           color: AppColor.white,

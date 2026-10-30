@@ -2,6 +2,7 @@ import 'package:app/const/custom_color.dart';
 import 'package:app/const/custom_fontweight.dart';
 import 'package:app/const/custom_input.dart';
 import 'package:app/const/custom_string.dart';
+import 'package:app/repo/auth_repo.dart';
 import 'package:app/utiles/routing_bottomNavigation.dart';
 
 import 'package:app/view/create_screen.dart';
@@ -14,8 +15,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final AuthRepo authrepo = AuthRepo();
   final _formKey = GlobalKey<FormState>();
-
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
@@ -71,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(height: 8),
                     CustomInput(
                       controller: emailController,
-                      
+
                       prefixicon: Icons.mail_outline_rounded,
                       obscureText: false,
                       validator: (value) {
@@ -94,7 +95,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     SizedBox(height: 8),
                     CustomInput(
-                    
                       controller: passwordController,
                       hintText: "Enter your password",
                       prefixicon: Icons.lock_outline_rounded,
@@ -124,13 +124,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     SizedBox(height: 24),
                     ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
+                      onPressed: () async {
+                        if (!_formKey.currentState!.validate()) {
+                          return;
+                        }
+                        try {
+                          final result = await authrepo.login(
+                            email: emailController.text.trim(),
+                            password: passwordController.text,
+                          );
+                          final token = result['access_token'];
+                          if (token == null || token.toString().isEmpty) {
+                            throw Exception('Access token not recived');
+                          }
+                          if (!context.mounted) return;
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
                               builder: (context) => RoutingBottomnavigation(),
                             ),
+                          );
+                          
+                          
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Login failed: $e")),
                           );
                         }
                       },
