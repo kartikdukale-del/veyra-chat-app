@@ -6,7 +6,7 @@ class AuthRepo {
   final FlutterSecureStorage storage = FlutterSecureStorage();
   late  final Dio dio = Dio(
     BaseOptions(
-      baseUrl: "http://127.0.0.1:8000",
+      baseUrl: "https://veyra-chat-app.onrender.com",
       headers: {"Content-Type": "application/json"},
     ),
   )..interceptors.add(
