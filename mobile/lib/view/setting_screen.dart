@@ -1,6 +1,7 @@
 import 'package:app/const/custom_color.dart';
 import 'package:app/const/custom_fontweight.dart';
 import 'package:app/const/custom_string.dart';
+import 'package:app/repo/auth_repo.dart';
 import 'package:app/view/login_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -12,6 +13,17 @@ class SettingScreen extends StatefulWidget {
 }
 
 class _SettingScreenState extends State<SettingScreen> {
+  final AuthRepo authRepo = AuthRepo();
+  Future<void> handleLogout() async {
+    await authRepo.logout();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -225,9 +237,7 @@ class _SettingScreenState extends State<SettingScreen> {
                         ),
                         padding: EdgeInsets.symmetric(horizontal: 12),
                       ),
-                      onPressed: () {
-                        Navigator.push(context,MaterialPageRoute(builder: (context)=>LoginScreen()));
-                      },
+                      onPressed:handleLogout,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -249,7 +259,7 @@ class _SettingScreenState extends State<SettingScreen> {
                       child: Text(
                         AppString.version,
                         style: TextStyle(fontSize: 9, color: AppColor.grey),
-                        ),
+                      ),
                     ),
                   ],
                 ),

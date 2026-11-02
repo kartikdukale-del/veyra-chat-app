@@ -48,3 +48,11 @@ def login_user(email: str, password: str, db: Session):
         "access_token": token,
         "token_type": "bearer"
     }
+
+def get_all_users(current_user:UserModel, db:Session):
+    users = (
+        db.query(UserModel)
+        .filter(UserModel.id != current_user.id)
+        .all()
+    )
+    return users

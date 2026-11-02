@@ -3,23 +3,92 @@ import 'package:app/const/custom_fontweight.dart';
 import 'package:app/const/custom_messgae.dart';
 import 'package:app/const/custom_string.dart';
 import 'package:app/model/message_model.dart';
+import 'package:app/repo/auth_repo.dart';
 import 'package:flutter/material.dart';
 
 class MessageScreen extends StatefulWidget {
   final String userName;
-  const MessageScreen({super.key, required this.userName});
+  final int conversationId;
+  const MessageScreen({super.key, required this.userName,required this.conversationId});
 
   @override
   State<MessageScreen> createState() => _MessageScreenState();
 }
 
 class _MessageScreenState extends State<MessageScreen> {
+  final   AuthRepo authRepo =AuthRepo();
   final TextEditingController messagecontroller = TextEditingController();
-  final List<Message> messages = [
-    Message(text: "Hey! Are we still on for coffee later?", isMe: false),
-    Message(text: "Absolutely. How does 4:30 sound?", isMe: true),
-    Message(text: "That sounds perfect. See you then!", isMe: false),
-  ];
+ List<Message> messages = [];
+ bool isLoading = true;
+
+Future <void > loadMessages() async{
+  try {
+    final currentUser  =await authRepo.getCurrent();
+
+    final response = await authRepo.getMessages(
+      widget.conversationId,
+    );
+
+    final loadMessages = response.map((item) {
+      return Message.fromJson(
+        Map<String,dynamic>.from(item),
+        
+         currentUser.id,
+         );
+    }).toList();
+
+    if (!mounted) return;
+
+    setState(() {
+      messages = loadMessages;
+      isLoading = false;
+    });
+    
+  } catch (e) {
+    debugPrint("Load messages error : $e");
+
+    if (!mounted) return;
+
+    setState(() {
+      isLoading = false;
+    });
+  }
+}
+  Future<void> handleSendMessage() async{
+    final content = messagecontroller.text.trim();
+
+
+    if(content.isEmpty)   return;
+     final newMessage =Message(
+      text:content,
+      isMe: true,
+     );
+
+    setState(() {
+      messages.add(newMessage);
+    });
+    messagecontroller.clear();
+    try {
+      await  authRepo.sendMessage(
+        widget.conversationId,
+        content,
+      );
+      await loadMessages();
+
+    }catch(e){
+      debugPrint("Send message error: $e");
+      if (!mounted) return;
+
+      setState(() {
+        messages.remove(newMessage);
+      });
+    }
+  }
+  @override
+  void initState(){
+    super.initState();
+    loadMessages();
+  }
   @override
   void dispose() {
     messagecontroller.dispose();
@@ -75,10 +144,10 @@ class _MessageScreenState extends State<MessageScreen> {
                   child: ListView.builder(
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
-                      final message = messages[index];
+                   final currentMessage = messages[index];
 
                       return MessageBubble(
-                        message: message,
+                        message: currentMessage,
                         onDelete: () {
                           setState(() {
                             messages.removeAt(index);
@@ -86,7 +155,7 @@ class _MessageScreenState extends State<MessageScreen> {
                         },
                         onEdit: () {
                           final controller = TextEditingController(
-                            text: message.text,
+                            text: currentMessage.text,
                           );
 
                           showDialog(
@@ -106,7 +175,7 @@ class _MessageScreenState extends State<MessageScreen> {
 
                                       if (updateText.isNotEmpty) {
                                         setState(() {
-                                          message.text = updateText;
+                                          currentMessage.text = updateText;
                                         });
                                         Navigator.pop(context);
                                         controller.dispose();
@@ -149,14 +218,7 @@ class _MessageScreenState extends State<MessageScreen> {
                   ),
                 ),
                 IconButton(
-                  onPressed: () {
-                    final text = messagecontroller.text.trim();
-                    if (text.isEmpty) return;
-                    setState(() {
-                      messages.add(Message(text: text, isMe: true));
-                    });
-                    messagecontroller.clear();
-                  },
+                  onPressed:handleSendMessage,
                   icon: Icon(Icons.send_rounded, color: AppColor.blue),
                 ),
               ],

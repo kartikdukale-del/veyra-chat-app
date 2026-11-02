@@ -1,26 +1,32 @@
 import 'package:app/const/custom_color.dart';
 import 'package:app/const/custom_fontweight.dart';
 import 'package:app/const/custom_string.dart';
+import 'package:app/model/usser_model.dart';
+import 'package:app/repo/auth_repo.dart';
 import 'package:app/utiles/routing_bottomNavigation.dart';
 import 'package:app/view/message_screen.dart';
 
 import 'package:flutter/material.dart';
 
-List<String> users = [
-  "Maya Chen",
-  "Noah Williams",
-  "Amelia Hart",
-  "Sofia Miller",
-  "Ethan Brooks",
-];
+
 
 class ChatScreen extends StatefulWidget {
+
   const ChatScreen({super.key});
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  final AuthRepo authRepo = AuthRepo();
+
+  late Future<List<UserModel>> userFuture;
+  @override
+  void initState(){
+    super.initState();
+
+    userFuture = authRepo.getAllUsers();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -86,24 +92,67 @@ class _ChatScreenState extends State<ChatScreen> {
               SizedBox(height: 15),
               Divider(height: 1),
               Expanded(
-                child: ListView.builder(
+                child: FutureBuilder<List<UserModel>>(
+                  future: userFuture,
+                  builder: (context,snapshot){
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
+
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Text("Unable to load users"),
+                        );
+                      }
+                      
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return Center(
+                          child: Text("No users found"),
+                        );
+                      }
+
+                        final users = snapshot.data!;
+
+                        
+                  
+                return ListView.builder(
                   itemCount: users.length,
                   itemBuilder: (context, index) {
+                  final user  = users[index];
                     return Column(
                       children: [
                         ListTile(
-                          onTap: () {
-                            Navigator.push(
+                          onTap: ()async {
+                           
+                           try {
+                             final conversationId = await authRepo.createConversation(user.id);
+
+                             if (!mounted )return;
+
+                             Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    MessageScreen(userName: users[index]),
-                              ),
-                            );
+                               MaterialPageRoute(
+                                builder:(context)=>MessageScreen(
+                                  userName: user.fullName, 
+                                  conversationId:conversationId
+                                  )
+                                 )
+                               );
+                           } catch(e){
+                             ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Unable to open"))
+                             );
+                           }
+
+
+
+
                           },
                           leading: CircleAvatar(child: Icon(Icons.person)),
                           title: Text(
-                            users[index],
+                            user.fullName,
                             style: TextStyle(fontWeight: AppFontWeight.w700),
                           ),
                           subtitle: Text(
@@ -122,7 +171,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       ],
                     );
                   },
-                ),
+                );
+                })
               ),
             ],
           ),

@@ -3,7 +3,6 @@ import 'package:app/const/custom_fontweight.dart';
 import 'package:app/const/custom_input.dart';
 import 'package:app/const/custom_string.dart';
 import 'package:app/repo/auth_repo.dart';
-import 'package:app/utiles/routing_bottomNavigation.dart';
 import 'package:app/view/login_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -65,7 +64,7 @@ class _CreateScreenState extends State<CreateScreen> {
     passwordController.dispose();
     super.dispose();
   }
-
+@override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColor.white,

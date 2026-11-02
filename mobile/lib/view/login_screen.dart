@@ -133,6 +133,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             email: emailController.text.trim(),
                             password: passwordController.text,
                           );
+                          final user = await authrepo.getCurrent();
+                          print(user.fullName);
+                          print(user.email);
+                          final profile =await  authrepo.getCurrent();
+                          debugPrint("CURRENT USER: $profile");
                           final token = result['access_token'];
                           if (token == null || token.toString().isEmpty) {
                             throw Exception('Access token not recived');

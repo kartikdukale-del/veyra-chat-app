@@ -8,6 +8,7 @@ from ..schema.login_schema import UserLogin
 from ..service.user_service import login_user
 from ..core.security import get_current_user
 from ..model.user_model import UserModel
+from ..service.user_service import get_all_users
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
@@ -40,6 +41,12 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         )
     return token
 
+@router.get("/",response_model=list[UserResponse])
+def get_users(
+    db:Session =Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    return get_all_users(current_user, db)
 
 @router.get("/me",response_model=UserResponse)
 def get_my_profile(

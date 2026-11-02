@@ -1,6 +1,8 @@
 import 'package:app/const/custom_color.dart';
 import 'package:app/const/custom_fontweight.dart';
 import 'package:app/const/custom_string.dart';
+import 'package:app/model/usser_model.dart';
+import 'package:app/repo/auth_repo.dart';
 import 'package:flutter/material.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -12,12 +14,25 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
  final nameController = TextEditingController(text: 'Alex');
-final emailController = TextEditingController(
+ final emailController = TextEditingController(
   text: 'alex@example.com',
 );
 final aboutController = TextEditingController(
   text: 'Available',
 ); 
+late Future<UserModel> userFuture;
+  @override
+  void initState(){
+    super.initState();
+    userFuture = loadUser();
+  }
+  Future<UserModel> loadUser() async{
+    final user = await AuthRepo().getCurrent();
+
+    nameController.text = user.fullName;
+    emailController.text = user.email;
+    return user;
+  }
   @override
   void dispose(){
     nameController.dispose();
@@ -92,10 +107,32 @@ final aboutController = TextEditingController(
       },
     );
   }
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColor.white,
-      body: SafeArea(
+      body: FutureBuilder<UserModel>(
+        future: userFuture, 
+        builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting){
+            return Center(
+              child: CircularProgressIndicator(),
+            );
+        }
+         if (snapshot.hasError) {
+           return Center(
+            child: Text("Unable to load profile"),
+           );
+         }
+         if (!snapshot.hasData) {
+           return Center(
+            child: Text("No user Data found"),
+           );
+         }
+         final user = snapshot.data!;
+         
+      
+      return SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 30),
           child: Column(
@@ -131,7 +168,7 @@ final aboutController = TextEditingController(
                     ),
                     Text(nameController.text, style: TextStyle(fontSize: 23)),
                     Text(
-                      emailController.text,
+                      user.email,
                       style: TextStyle(color: AppColor.grey, fontSize: 10),
                     ),
                     OutlinedButton(
@@ -228,7 +265,7 @@ final aboutController = TextEditingController(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              emailController.text,
+                              AppString.email,
                               style: TextStyle(
                                 fontSize: 9,
                                 color: AppColor.grey,
@@ -236,7 +273,7 @@ final aboutController = TextEditingController(
                             ),
                             SizedBox(height: 4,),
                             Text(
-                              AppString.emailexample,
+                              emailController.text,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: AppFontWeight.w500,
@@ -298,7 +335,9 @@ final aboutController = TextEditingController(
             ],
           ),
         ),
-      ),
+      );
+      },
+     ),
     );
   }
 }
