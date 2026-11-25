@@ -1,17 +1,13 @@
 import 'package:app/const/custom_color.dart';
 import 'package:app/const/custom_fontweight.dart';
 import 'package:app/const/custom_string.dart';
-import 'package:app/model/usser_model.dart';
+import 'package:app/model/conversation_model.dart';
 import 'package:app/repo/auth_repo.dart';
 import 'package:app/utiles/routing_bottomNavigation.dart';
 import 'package:app/view/message_screen.dart';
-
 import 'package:flutter/material.dart';
 
-
-
 class ChatScreen extends StatefulWidget {
-
   const ChatScreen({super.key});
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -20,13 +16,21 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final AuthRepo authRepo = AuthRepo();
 
-  late Future<List<UserModel>> userFuture;
-  @override
-  void initState(){
-    super.initState();
+  late Future<List<ConversationModel>> conversationsFuture;
 
-    userFuture = authRepo.getAllUsers();
+  @override
+  void initState() {
+    super.initState();
+    conversationsFuture = authRepo.getConversations();
   }
+
+  Future<void> _refreshConversations() async {
+    setState(() {
+      conversationsFuture = authRepo.getConversations();
+    });
+    await conversationsFuture;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,87 +96,85 @@ class _ChatScreenState extends State<ChatScreen> {
               SizedBox(height: 15),
               Divider(height: 1),
               Expanded(
-                child: FutureBuilder<List<UserModel>>(
-                  future: userFuture,
-                  builder: (context,snapshot){
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(
-                          child: CircularProgressIndicator(),
-                        );
-                      }
+                child: FutureBuilder<List<ConversationModel>>(
+                  future: conversationsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    }
 
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Text("Unable to load users"),
-                        );
-                      }
-                      
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Center(
-                          child: Text("No users found"),
-                        );
-                      }
-
-                        final users = snapshot.data!;
-
-                        
-                  
-                return ListView.builder(
-                  itemCount: users.length,
-                  itemBuilder: (context, index) {
-                  final user  = users[index];
-                    return Column(
-                      children: [
-                        ListTile(
-                          onTap: ()async {
-                           
-                           try {
-                             final conversationId = await authRepo.createConversation(user.id);
-
-                             if (!mounted )return;
-
-                             Navigator.push(
-                              context,
-                               MaterialPageRoute(
-                                builder:(context)=>MessageScreen(
-                                  userName: user.fullName, 
-                                  conversationId:conversationId
-                                  )
-                                 )
-                               );
-                           } catch(e){
-                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Unable to open"))
-                             );
-                           }
-
-
-
-
-                          },
-                          leading: CircleAvatar(child: Icon(Icons.person)),
-                          title: Text(
-                            user.fullName,
-                            style: TextStyle(fontWeight: AppFontWeight.w700),
-                          ),
-                          subtitle: Text(
-                            "Last message here",
-                            style: TextStyle(
-                              color: AppColor.grey,
-                              fontSize: 10,
-                            ),
-                          ),
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: TextButton(
+                          onPressed: _refreshConversations,
+                          child: Text("Unable to load conversations. Tap to retry"),
                         ),
-                        Divider(
-                          height: 1,
-                          thickness: 0.5,
-                          color: AppColor.grey,
-                        ),
-                      ],
+                      );
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return Center(child: Text("No conversations yet"));
+                    }
+
+                    final conversations = snapshot.data!;
+
+                    return RefreshIndicator(
+                      onRefresh: _refreshConversations,
+                      child: ListView.builder(
+                        itemCount: conversations.length,
+                        itemBuilder: (context, index) {
+                          final conv = conversations[index];
+                          final preview =
+                              (conv.lastMessage != null &&
+                                  conv.lastMessage!.isNotEmpty)
+                              ? conv.lastMessage!
+                              : "Start a conversation";
+                          return Column(
+                            children: [
+                              ListTile(
+                                onTap: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => MessageScreen(
+                                        userName: conv.otherUser.fullName,
+                                        conversationId: conv.conversationId,
+                                      ),
+                                    ),
+                                  );
+                                  if (mounted) {
+                                    _refreshConversations();
+                                  }
+                                },
+                                leading: CircleAvatar(child: Icon(Icons.person)),
+                                title: Text(
+                                  conv.otherUser.fullName,
+                                  style: TextStyle(
+                                    fontWeight: AppFontWeight.w700,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  preview,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: AppColor.grey,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                              Divider(
+                                height: 1,
+                                thickness: 0.5,
+                                color: AppColor.grey,
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     );
                   },
-                );
-                })
+                ),
               ),
             ],
           ),

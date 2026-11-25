@@ -1,23 +1,52 @@
 import 'package:app/const/custom_color.dart';
 import 'package:app/const/custom_string.dart';
+import 'package:app/repo/auth_repo.dart';
+import 'package:app/utiles/routing_bottomNavigation.dart';
 import 'package:app/view/login_screen.dart';
 import 'package:flutter/material.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState(){
-    super.initState();
 
-    Future.delayed(Duration(seconds: 3),(){
-      if (!mounted) return;
-      Navigator.pushReplacement(context,
-      MaterialPageRoute(builder: (context) =>LoginScreen()));
-          });
+class _SplashScreenState extends State<SplashScreen> {
+  final AuthRepo _authRepo = AuthRepo();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSession();
   }
+
+  Future<void> _checkSession() async {
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    final token = await _authRepo.getToken();
+    if (token != null && token.isNotEmpty) {
+      try {
+        await _authRepo.getCurrent(forceRefresh: true);
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => RoutingBottomnavigation()),
+        );
+        return;
+      } catch (_) {
+        await _authRepo.logout();
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColor.white,
@@ -48,7 +77,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     SizedBox(
                       height: 22,
                       width: 22,
-                      child:CircularProgressIndicator(color: AppColor.blue),
+                      child: CircularProgressIndicator(color: AppColor.blue),
                     ),
                     SizedBox(height: 6),
                     Text(
